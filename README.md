@@ -1,6 +1,6 @@
 # Sairaj's Pulse
-**aka The Oracle of Dalal street**
-**Sairaj's Pulse** is an interactive and visually-rich dashboard for simulating stock sentiment analysis and volatility prediction, with a focus on the Indian stock market (NSE). Designed with a modern UI and smooth animations, it provides a comprehensive mock trading and analytics experience for enthusiasts, students, and developers interested in financial data visualization.
+**The Oracle of Dalal street**
+/**Sairaj's Pulse** is an interactive and visually-rich dashboard for simulating stock sentiment analysis and volatility prediction, with a focus on the Indian stock market (NSE). Designed with a modern UI and smooth animations, it provides a comprehensive mock trading and analytics experience for enthusiasts, students, and developers interested in financial data visualization.
 
 ---
 
