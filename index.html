@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sairaj Chowdhary's Pulse Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712; 
+            overflow: hidden; 
+        }
+        .card {
+            background-color: rgba(17, 24, 39, 0.8); 
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .news-feed::-webkit-scrollbar { width: 4px; }
+        .news-feed::-webkit-scrollbar-track { background: #1F2937; }
+        .news-feed::-webkit-scrollbar-thumb { background: #4F46E5; border-radius: 4px; }
+        
+        #background-animation, #grid-animation-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .shape {
+            position: absolute;
+            background: linear-gradient(45deg, rgba(79, 70, 229, 0.2), rgba(129, 140, 248, 0.2));
+            border-radius: 20%;
+            mix-blend-mode: screen;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 1rem;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: rgba(129, 140, 248, 0.3);
+            border-radius: 50%;
+        }
+
+        /* Styles for the animated title */
+        #animated-word-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        #animated-word-wrapper .letter {
+            display: inline-block;
+            line-height: 1em;
+            transform-origin: 0 0;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="background-animation"></div>
+    <div id="grid-animation-container"><div class="grid"></div></div>
+
+    <div class="relative z-10 h-screen overflow-y-auto">
+        <div class="container mx-auto p-4 md:p-6 lg:p-8">
+            <!-- Header -->
+            <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <!-- Emblem SVG -->
+                    <div class="w-12 h-12 flex-shrink-0">
+                         <svg id="emblem" class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 0L61.226 24.387L87.764 29.524L68.269 47.761L73.495 74.387L50 61.474L26.505 74.387L31.731 47.761L12.236 29.524L38.774 24.387L50 0Z" fill="url(#emblemGradient)"/>
+                            <circle cx="50" cy="50" r="15" fill="#030712"/>
+                            <path d="M50 40L53.464 46.536L60.928 47.654L55.464 52.846L56.928 60.346L50 56.5L43.072 60.346L44.536 52.846L39.072 47.654L46.536 46.536L50 40Z" fill="url(#emblemGradient)"/>
+                            <defs>
+                                <linearGradient id="emblemGradient" x1="50" y1="0" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#818CF8"/>
+                                    <stop offset="1" stop-color="#4F46E5"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-2xl md:text-3xl font-bold text-indigo-400 mb-0 flex items-baseline">
+                            <span>Sairaj Chowdhary's&nbsp;</span>
+                            <span id="animated-word-wrapper"></span>
+                        </h1>
+                        <p class="text-gray-400 text-sm md:text-md">Sentiment Analysis & Volatility Prediction</p>
+                    </div>
+                </div>
+                <div id="live-clock" class="text-lg text-gray-400 mt-4 md:mt-0 bg-gray-800/50 border border-gray-700 px-4 py-2 rounded-lg flex-shrink-0"></div>
+            </header>
+
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                
+                <!-- Left Panel -->
+                <div class="lg:col-span-2 flex flex-col gap-6">
+                    <!-- Controls and Metrics Card -->
+                    <div class="card p-6 rounded-2xl shadow-lg flex flex-col space-y-6">
+                        <div>
+                            <label for="stock-select" class="block text-sm font-medium text-gray-300 mb-2">Select Stock (NSE)</label>
+                            <select id="stock-select" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                                <option value="HDFCBANK.NS" data-price="1500" data-target="1750">HDFC Bank (HDFCBANK)</option>
+                                <option value="AXISBANK.NS" data-price="1200" data-target="1350">AXIS Bank (AXISBANK)</option>
+                                <option value="TATAMOTORS.NS" data-price="950" data-target="1100">Tata Motors (TATAMOTORS)</option>
+                                <option value="ADANIGREEN.NS" data-price="1800" data-target="2100">Adani Green Energy (ADANIGREEN)</option>
+                                <option value="RELIANCE.NS" data-price="2900" data-target="3200">Reliance (RELIANCE)</option>
+                            </select>
+                        </div>
+
+                        <div class="border-t border-gray-700 pt-6 space-y-4">
+                            <h3 class="text-xl font-semibold text-white mb-2">Live Metrics</h3>
+                            <div id="metrics-container" class="grid grid-cols-2 gap-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- Price Target Gauge -->
+                    <div class="card p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-xl font-semibold text-white mb-4 text-center">Analyst Price Target</h3>
+                        <div class="relative w-full h-48" id="gauge-container">
+                            <svg viewBox="0 0 100 50" class="w-full h-full">
+                                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#374151" stroke-width="8" stroke-linecap="round"></path>
+                                <path id="gauge-fill" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gauge-gradient)" stroke-width="8" stroke-linecap="round"></path>
+                                <defs>
+                                    <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#34D399" />
+                                        <stop offset="50%" stop-color="#FBBF24" />
+                                        <stop offset="100%" stop-color="#F87171" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute w-full h-full top-0 left-0 flex flex-col items-center justify-end pb-2">
+                                 <div id="gauge-value" class="text-3xl font-bold text-white">₹0.00</div>
+                                 <div class="text-sm text-gray-400">Target: <span id="gauge-target">₹0.00</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- News Feed Card -->
+                    <div class="card p-6 rounded-2xl shadow-lg flex flex-col">
+                        <h3 class="text-xl font-semibold text-white mb-4">Live News Feed</h3>
+                        <div id="news-feed" class="news-feed space-y-3 h-64 overflow-y-auto pr-2"></div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Charts -->
+                <div class="lg:col-span-3 card p-6 rounded-2xl shadow-lg space-y-8">
+                     <div class="chart-container">
+                        <h3 class="text-xl font-semibold text-white mb-4">Simulated Stock Price (INR)</h3>
+                        <div class="h-64"><canvas id="priceChart"></canvas></div>
+                    </div>
+                    <div class="border-t border-gray-700 pt-8 chart-container">
+                        <h3 class="text-xl font-semibold text-white mb-4">Sentiment Trend</h3>
+                        <div class="h-64"><canvas id="sentimentChart"></canvas></div>
+                    </div>
+                    <div class="border-t border-gray-700 pt-8 chart-container">
+                        <h3 class="text-xl font-semibold text-white mb-4">Predicted Volatility Index</h3>
+                        <div class="h-64"><canvas id="volatilityChart"></canvas></div>
+                    </div>
+                     <div class="pt-6">
+                        <button id="refresh-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">
+                            Fetch New Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+             <footer class="text-center py-8 text-gray-500 text-sm col-span-full">
+                <p>&copy; 2025 Sairaj Chowdhary's Pulse. All Rights Reserved.</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const metricsContainer = document.getElementById('metrics-container');
+        const newsFeedContainer = document.getElementById('news-feed');
+        const refreshButton = document.getElementById('refresh-button');
+        const stockSelect = document.getElementById('stock-select');
+        const liveClock = document.getElementById('live-clock');
+        const gaugeFill = document.getElementById('gauge-fill');
+        const gaugeValue = document.getElementById('gauge-value');
+        const gaugeTarget = document.getElementById('gauge-target');
+        const backgroundAnimationContainer = document.getElementById('background-animation');
+        const gridContainer = document.querySelector('#grid-animation-container .grid');
+        const animatedWordWrapper = document.getElementById('animated-word-wrapper');
+
+        let sentimentChart, volatilityChart, priceChart;
+        let currentPrice = 1500, analystTarget = 1750;
+        let animatedMetrics = {};
+        let gaugePathLength = 0; // To be calculated on load
+
+        // --- Mock Data ---
+        const mockNewsHeadlines = [
+            "Market awaits RBI's decision on repo rates.", "Auto sector sees major gains as {TICKER} stock soars.",
+            "New EV launch from {TICKER} receives positive reviews.", "Analysts predict a bullish quarter for {TICKER} post budget.",
+            "Global supply chain issues continue to affect {TICKER} manufacturing.", "Monsoon forecast brings cheer to the market.",
+            "{TICKER} announces record-breaking quarterly profits.", "SEBI introduces new regulations for FIIs.",
+            "Is {TICKER} a good buy for Diwali? Experts weigh in.",
+        ];
+
+        // --- Mock Data Generation ---
+        function generateMockData() {
+            const sentimentScore = Math.random() * 2 - 1;
+            const priceChange = (sentimentScore * (currentPrice * 0.001)) + (Math.random() - 0.5) * (currentPrice * 0.002);
+            currentPrice += priceChange;
+            return {
+                time: new Date(), sentimentScore,
+                volatilityIndex: Math.abs(sentimentScore) * 40 + Math.random() * 20,
+                price: currentPrice, modelConfidence: 0.90 + Math.random() * 0.08
+            };
+        }
+        function generateMockNews() {
+            const ticker = stockSelect.options[stockSelect.selectedIndex].text.split(' ')[0];
+            return mockNewsHeadlines[Math.floor(Math.random() * mockNewsHeadlines.length)].replace('{TICKER}', ticker);
+        }
+
+        // --- Chart Initialization ---
+        function createCharts() {
+            const chartOptions = (yAxisLabel) => ({
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } }, ticks: { color: '#9CA3AF', maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+                    y: { ticks: { color: '#9CA3AF', callback: (value) => yAxisLabel === '₹' ? `₹${value.toFixed(2)}` : value.toFixed(2) }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+                },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#E5E7EB', bodyColor: '#D1D5DB', borderColor: '#4B5563', borderWidth: 1, mode: 'index', intersect: false } },
+                animation: { duration: 400, easing: 'easeInOutQuad' }, interaction: { mode: 'index', intersect: false }
+            });
+            const lineChartConfig = (borderColor, bgColor, label) => ({
+                type: 'line', data: { datasets: [{ label, data: [], borderColor, backgroundColor: bgColor, fill: true, tension: 0.4, pointRadius: 0 }] },
+            });
+
+            priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), { ...lineChartConfig('#34D399', 'rgba(52, 211, 153, 0.1)', 'Price'), options: chartOptions('₹') });
+            sentimentChart = new Chart(document.getElementById('sentimentChart').getContext('2d'), { ...lineChartConfig('#818CF8', 'rgba(129, 140, 248, 0.1)', 'Sentiment'), options: chartOptions('') });
+            volatilityChart = new Chart(document.getElementById('volatilityChart').getContext('2d'), { ...lineChartConfig('#F472B6', 'rgba(244, 114, 182, 0.1)', 'Volatility'), options: chartOptions('') });
+        }
+
+        // --- UI Update & Animation Functions ---
+        function updateDashboard() {
+            const { time, sentimentScore, volatilityIndex, price, modelConfidence } = generateMockData();
+            const updateChartData = (chart, value) => {
+                const dataset = chart.data.datasets[0].data;
+                if (dataset.length >= 30) dataset.shift();
+                dataset.push({ x: time.getTime(), y: value });
+                chart.update('quiet');
+            };
+
+            updateChartData(priceChart, price);
+            updateChartData(sentimentChart, sentimentScore);
+            updateChartData(volatilityChart, volatilityIndex);
+            
+            updateMetrics({ sentimentScore, volatilityIndex, modelConfidence });
+            updateGauge(price, analystTarget);
+        }
+
+        function updateMetrics(data) {
+            const metrics = {
+                Sentiment: { value: data.sentimentScore, format: (v) => v.toFixed(3), color: data.sentimentScore > 0.2 ? 'text-green-400' : data.sentimentScore < -0.2 ? 'text-red-400' : 'text-yellow-400' },
+                Volatility: { value: data.volatilityIndex, format: (v) => v.toFixed(2), color: data.volatilityIndex > 35 ? 'text-red-400' : data.volatilityIndex > 15 ? 'text-yellow-400' : 'text-green-400' },
+                'Risk Level': { value: data.volatilityIndex > 35 ? 'High' : (data.volatilityIndex > 15 ? 'Medium' : 'Low'), format: (v) => v, color: data.volatilityIndex > 35 ? 'text-red-400' : data.volatilityIndex > 15 ? 'text-yellow-400' : 'text-green-400' },
+                'Model Confidence': { value: data.modelConfidence * 100, format: (v) => `${v.toFixed(1)}%`, color: 'text-cyan-400' }
+            };
+            
+            if (Object.keys(animatedMetrics).length === 0) {
+                metricsContainer.innerHTML = Object.keys(metrics).map(key => `
+                    <div class="bg-gray-700/50 p-3 rounded-lg"><p class="text-sm text-gray-400">${key}</p><p id="metric-${key.replace(' ', '')}" class="text-xl font-bold"></p></div>
+                `).join('');
+            }
+
+            for (const key in metrics) {
+                const id = `metric-${key.replace(' ', '')}`;
+                const el = document.getElementById(id);
+                const metric = metrics[key];
+                el.className = `text-xl font-bold ${metric.color}`;
+
+                if (typeof metric.value === 'number') {
+                    if (!animatedMetrics[key]) animatedMetrics[key] = { value: 0 };
+                    anime({
+                        targets: animatedMetrics[key],
+                        value: metric.value,
+                        round: 1000,
+                        easing: 'easeOutCubic',
+                        duration: 800,
+                        update: () => { el.innerHTML = metric.format(animatedMetrics[key].value); }
+                    });
+                } else {
+                    el.innerHTML = metric.format(metric.value);
+                }
+            }
+        }
+        
+        function updateGauge(price, target) {
+            if (gaugePathLength === 0) return; // Don't animate if length not calculated
+            
+            const percentage = Math.max(0, Math.min(1, price / (target * 1.5)));
+            
+            anime({
+                targets: gaugeFill,
+                strokeDashoffset: gaugePathLength * (1 - percentage),
+                easing: 'easeOutCubic',
+                duration: 1000
+            });
+            
+            const animatedGaugeValue = { value: parseFloat(gaugeValue.innerText.replace('₹', '')) || 0 };
+            anime({
+                targets: animatedGaugeValue,
+                value: price,
+                round: 100,
+                easing: 'easeOutCubic',
+                duration: 1000,
+                update: () => { gaugeValue.innerHTML = `₹${animatedGaugeValue.value.toFixed(2)}`; }
+            });
+            gaugeTarget.innerHTML = `₹${target.toFixed(2)}`;
+        }
+
+        function updateNewsFeed() {
+            const newsItem = document.createElement('div');
+            newsItem.className = 'bg-gray-700/50 p-3 rounded-lg';
+            newsItem.innerHTML = `<p class="text-sm text-gray-300">${generateMockNews()}</p><p class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString()}</p>`;
+            newsItem.style.opacity = 0;
+            newsItem.style.transform = 'translateY(20px)';
+            
+            newsFeedContainer.prepend(newsItem);
+            anime({ targets: newsItem, translateY: 0, opacity: 1, duration: 500, easing: 'easeOutCubic' });
+
+            if (newsFeedContainer.children.length > 10) {
+                const lastChild = newsFeedContainer.lastChild;
+                anime({ targets: lastChild, opacity: 0, duration: 300, easing: 'easeInCubic', complete: () => lastChild.remove() });
+            }
+        }
+
+        function updateClock() {
+            liveClock.textContent = new Date().toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'
+            });
+        }
+        
+        function createBackgroundAnimation() {
+            const shapeCount = 20;
+            for (let i = 0; i < shapeCount; i++) {
+                const shape = document.createElement('div');
+                shape.classList.add('shape');
+                const size = anime.random(20, 80) + 'px';
+                shape.style.width = size;
+                shape.style.height = size;
+                shape.style.top = anime.random(0, 100) + 'vh';
+                shape.style.left = anime.random(0, 100) + 'vw';
+                shape.style.opacity = anime.random(10, 20) / 100;
+                backgroundAnimationContainer.appendChild(shape);
+            }
+
+            function animateShapes() {
+                anime({
+                    targets: '.shape',
+                    translateX: () => anime.random(-150, 150),
+                    translateY: () => anime.random(-150, 150),
+                    rotate: () => anime.random(-180, 180),
+                    scale: () => anime.random(0.7, 1.3),
+                    duration: () => anime.random(2000, 4000),
+                    easing: 'easeInOutQuad',
+                    complete: animateShapes,
+                });
+            }
+            animateShapes();
+        }
+
+        function createGridAnimation() {
+            const gridSize = 13 * 13;
+            gridContainer.innerHTML = '';
+            for (let i = 0; i < gridSize; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                gridContainer.appendChild(dot);
+            }
+
+            const options = {
+                grid: [13, 13],
+                from: 'center'
+            };
+
+            anime({
+                targets: '.dot',
+                scale: [
+                    { value: 1.5, easing: 'easeOutSine', duration: 250 },
+                    { value: 1, easing: 'easeInOutQuad', duration: 500 }
+                ],
+                delay: anime.stagger(100, options),
+                loop: true,
+                direction: 'alternate'
+            });
+        }
+
+        function createTitleAnimation() {
+            const words = ['Pulse', 'Matrix', 'Enigma', 'System'];
+            const timeline = anime.timeline({
+                loop: true,
+                autoplay: true,
+            });
+
+            words.forEach(word => {
+                timeline.add({
+                    targets: animatedWordWrapper,
+                    begin: () => {
+                        animatedWordWrapper.innerHTML = word.replace(/\S/g, "<span class='letter'>$&</span>");
+                    },
+                    // Add a small offset to ensure the DOM is updated before the animation starts
+                    offset: '+=1' 
+                })
+                .add({
+                    targets: '#animated-word-wrapper .letter',
+                    translateY: ["1.1em", 0],
+                    translateX: ["0.55em", 0],
+                    translateZ: 0,
+                    rotateZ: [180, 0],
+                    duration: 750,
+                    easing: "easeOutExpo",
+                    delay: anime.stagger(50)
+                })
+                .add({
+                    targets: '#animated-word-wrapper .letter',
+                    opacity: 0,
+                    scale: 0.5,
+                    duration: 500,
+                    easing: "easeOutExpo",
+                    delay: anime.stagger(30, {from: 'last', start: 1500})
+                });
+            });
+        }
+
+        // --- Event Listeners ---
+        refreshButton.addEventListener('click', () => {
+            anime({ targets: refreshButton, scale: [ { value: 0.95, duration: 150 }, { value: 1, duration: 150 } ], easing: 'easeInOutQuad' });
+            updateDashboard();
+            updateNewsFeed();
+        });
+
+        stockSelect.addEventListener('change', () => {
+            const selectedOption = stockSelect.options[stockSelect.selectedIndex];
+            currentPrice = parseFloat(selectedOption.getAttribute('data-price')) + (Math.random() * 10 - 5);
+            analystTarget = parseFloat(selectedOption.getAttribute('data-target'));
+
+            [priceChart, sentimentChart, volatilityChart].forEach(chart => { chart.data.datasets[0].data = []; });
+            newsFeedContainer.innerHTML = '';
+            animatedMetrics = {}; // Reset for new stock
+            
+            for(let i=0; i<5; i++) {
+                setTimeout(() => { updateDashboard(); updateNewsFeed(); }, i * 200);
+            }
+        });
+
+        // --- Initial Load & Intervals ---
+        window.onload = () => {
+            createCharts();
+            updateClock();
+            
+            gaugePathLength = gaugeFill.getTotalLength();
+            gaugeFill.style.strokeDasharray = gaugePathLength;
+            gaugeFill.style.strokeDashoffset = gaugePathLength;
+
+            stockSelect.dispatchEvent(new Event('change'));
+            createBackgroundAnimation();
+            createGridAnimation();
+            createTitleAnimation();
+
+            anime({ targets: '.card', translateY: [20, 0], opacity: [0, 1], delay: anime.stagger(100), easing: 'easeOutCubic' });
+            
+            // Emblem animation as requested
+            anime({
+                targets: '#emblem',
+                rotate: '1turn',
+                loop: true,
+                duration: 8000,
+                easing: 'inOutExpo'
+            });
+
+            setInterval(updateDashboard, 5000);
+            setInterval(updateNewsFeed, 8000);
+            setInterval(updateClock, 1000);
+        };
+    </script>
+</body>
+</html>
