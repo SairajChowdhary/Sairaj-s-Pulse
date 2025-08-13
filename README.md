@@ -20,8 +20,7 @@
 ---
 
 ## 🖥️ Demo
-
-> _No live demo yet. To run locally, follow the steps below!_
+   [Website](algorichm.netlify.app)
 
 ---
 
