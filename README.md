@@ -20,7 +20,7 @@
 ---
 
 ## 🖥️ Demo
-   [Website](algorichm.netlify.app)
+   [Website](https://algorichm.netlify.app/)
 
 ---
 
